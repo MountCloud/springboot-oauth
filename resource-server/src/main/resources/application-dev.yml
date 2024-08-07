@@ -1,0 +1,12 @@
+ACCESS_TOKEN_PRIVATE_KEY_PATH: "keys/private.key"
+ACCESS_TOKEN_PUBLIC_KEY_PATH: "keys/public.key"
+REFRESH_TOKEN_PRIVATE_KEY_PATH: "keys/private.key"
+REFRESH_TOKEN_PUBLIC_KEY_PATH: "keys/public.key"
+
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:9000
+          jwk-set-uri: http://localhost:9000/oauth2/jwks
