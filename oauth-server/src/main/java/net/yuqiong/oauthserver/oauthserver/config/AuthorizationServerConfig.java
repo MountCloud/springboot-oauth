@@ -7,6 +7,7 @@ import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
 import net.yuqiong.oauthserver.oauthserver.password.PasswordAuthenticationConverter;
 import net.yuqiong.oauthserver.oauthserver.password.PasswordAuthenticationProvider;
+import net.yuqiong.oauthserver.oauthserver.token.AppJwtCustomizer;
 import net.yuqiong.oauthserver.oauthserver.token.KeyService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -176,6 +177,7 @@ public class AuthorizationServerConfig  {
     public OAuth2TokenGenerator<?> tokenGenerator() {
         JWKSource<SecurityContext> jwkSource = jwkSource();
         JwtGenerator jwtGenerator = new JwtGenerator(new NimbusJwtEncoder(jwkSource));
+        jwtGenerator.setJwtCustomizer(new AppJwtCustomizer());
         return new DelegatingOAuth2TokenGenerator(
                 jwtGenerator);
     }

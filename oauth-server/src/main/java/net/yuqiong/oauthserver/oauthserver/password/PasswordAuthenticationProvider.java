@@ -130,6 +130,7 @@ public class PasswordAuthenticationProvider implements AuthenticationProvider {
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .authorizedScopes(scopes)
+                .attribute(Principal.class.getName(), usernamePasswordAuthentication)
                 .build();
         authorizationService.save(authorization);
 
