@@ -5,6 +5,7 @@ import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
+import net.yuqiong.oauthserver.oauthserver.converter.AppJwtGrantedAuthoritiesConverter;
 import net.yuqiong.oauthserver.oauthserver.token.KeyService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -29,11 +30,12 @@ public class ResourceServerConfig {
 
     @Bean
     public SecurityFilterChain resourceServerSecurityFilterChain(HttpSecurity http) throws Exception {
-        http
+        http.csrf(csrf->csrf.disable())
                 .authorizeHttpRequests(authorizeRequests ->
                         authorizeRequests
-                                .requestMatchers("/api/**").authenticated()
-                                .anyRequest().permitAll()
+                                .anyRequest().authenticated()
+//                                .requestMatchers("/api/**").authenticated()
+//                                .anyRequest().permitAll()
                 )
                 .oauth2ResourceServer(oauth2ResourceServer ->
                         oauth2ResourceServer
@@ -42,12 +44,15 @@ public class ResourceServerConfig {
     }
 
     private JwtAuthenticationConverter jwtAuthenticationConverter() {
-        JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
-        grantedAuthoritiesConverter.setAuthoritiesClaimName("scope");
-        grantedAuthoritiesConverter.setAuthorityPrefix("SCOPE_");
+//        JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
+//        grantedAuthoritiesConverter.setAuthoritiesClaimName("scope");
+//        grantedAuthoritiesConverter.setAuthorityPrefix("SCOPE_");
+
+        AppJwtGrantedAuthoritiesConverter appJwtGrantedAuthoritiesConverter = new AppJwtGrantedAuthoritiesConverter();
 
         JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
-        jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter);
+//        jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter);
+        jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(appJwtGrantedAuthoritiesConverter);
         return jwtAuthenticationConverter;
     }
 
@@ -59,16 +64,15 @@ public class ResourceServerConfig {
 
     @Bean
     public JwtDecoder jwtDecoder() throws NoSuchAlgorithmException {
-        return NimbusJwtDecoder.withPublicKey(keyService.getAccessTokenPublicKey()).build();
+        return NimbusJwtDecoder.withPublicKey(keyService.getTokenPublicKey()).build();
     }
 
     private JWKSource<SecurityContext> jwkSource() throws NoSuchAlgorithmException {
-        RSAKey rsaKey = new RSAKey.Builder(keyService.getAccessTokenPublicKey())
+        RSAKey rsaKey = new RSAKey.Builder(keyService.getTokenPublicKey())
 //                .privateKey(keyService.getAccessTokenPrivateKey())
                 .keyID(UUID.randomUUID().toString())
                 .build();
         JWKSet jwkSet = new JWKSet(rsaKey);
         return new ImmutableJWKSet<>(jwkSet);
     }
-
 }

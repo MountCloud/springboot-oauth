@@ -6,12 +6,6 @@ spring:
     name: oauth-server
   profiles:
     active: dev
-access-token:
-  private: ${ACCESS_TOKEN_PRIVATE_KEY_PATH}
-  public: ${ACCESS_TOKEN_PUBLIC_KEY_PATH}
-refresh-token:
-  private: ${REFRESH_TOKEN_PRIVATE_KEY_PATH}
-  public: ${REFRESH_TOKEN_PUBLIC_KEY_PATH}
 #data:
 #  mongodb:
 #    uri: mongodb://${MONGODB_HOST}:${MONGODB_PORT}/?authSource=${MONGODB_DB}

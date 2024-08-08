@@ -9,10 +9,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.security.*;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
@@ -20,7 +17,6 @@ import java.security.spec.EncodedKeySpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.Arrays;
 import java.util.Objects;
 
 @Component
@@ -29,44 +25,28 @@ public class KeyService {
     @Autowired
     Environment environment;
 
-    @Value("${access-token.private}")
-    private String accessTokenPrivateKeyPath;
+    @Value("${token.private-key-path}")
+    private String tokenPrivateKeyPath;
 
-    @Value("${access-token.public}")
-    private String accessTokenPublicKeyPath;
+    @Value("${token.public-key-path}")
+    private String tokenPublicKeyPath;
 
-    @Value("${refresh-token.private}")
-    private String refreshTokenPrivateKeyPath;
+    private KeyPair tokenKeyPair;
 
-    @Value("${refresh-token.public}")
-    private String refreshTokenPublicKeyPath;
-
-    private KeyPair accessTokenKeyPair;
-    private KeyPair refreshTokenKeyPair;
-
-    private KeyPair getAccessTokenKeyPair() {
-        if (Objects.isNull(accessTokenKeyPair)) {
-            accessTokenKeyPair = getKeyPair(accessTokenPublicKeyPath, accessTokenPrivateKeyPath);
+    private KeyPair getTokenKeyPair() {
+        if (Objects.isNull(tokenKeyPair)) {
+            tokenKeyPair = getKeyPair(tokenPublicKeyPath, tokenPrivateKeyPath);
         }
-        return accessTokenKeyPair;
-    }
-
-    private KeyPair getRefreshTokenKeyPair() {
-        if (Objects.isNull(refreshTokenKeyPair)) {
-            refreshTokenKeyPair = getKeyPair(refreshTokenPublicKeyPath, refreshTokenPrivateKeyPath);
-        }
-        return refreshTokenKeyPair;
+        return tokenKeyPair;
     }
 
     private KeyPair getKeyPair(String publicKeyPath, String privateKeyPath) {
-        KeyPair keyPair;
+        KeyPair keyPair = null;
 
-        // 使用 ClassPathResource 来定位资源
         Resource publicKeyResource = new ClassPathResource(publicKeyPath);
         Resource privateKeyResource = new ClassPathResource(privateKeyPath);
 
         if (publicKeyResource.exists() && privateKeyResource.exists()) {
-            //log.info("loading keys from file: {}, {}", publicKeyPath, privateKeyPath);
             try {
                 KeyFactory keyFactory = KeyFactory.getInstance("RSA");
 
@@ -83,47 +63,15 @@ public class KeyService {
             } catch (NoSuchAlgorithmException | IOException | InvalidKeySpecException e) {
                 throw new RuntimeException(e);
             }
-        } else {
-            if (Arrays.stream(environment.getActiveProfiles()).anyMatch(s -> s.equals("prod"))) {
-                throw new RuntimeException("public and private keys don't exist");
-            }
+        }else{
+            throw new RuntimeException("KeyPair not found");
         }
-
-        File directory = new File("access-refresh-token-keys");
-        if (!directory.exists()) {
-            directory.mkdirs();
-        }
-        try {
-            //log.info("Generating new public and private keys: {}, {}", publicKeyPath, privateKeyPath);
-            KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
-            keyPairGenerator.initialize(2048);
-            keyPair = keyPairGenerator.generateKeyPair();
-            try (FileOutputStream fos = new FileOutputStream(publicKeyPath)) {
-                X509EncodedKeySpec keySpec = new X509EncodedKeySpec(keyPair.getPublic().getEncoded());
-                fos.write(keySpec.getEncoded());
-            }
-
-            try (FileOutputStream fos = new FileOutputStream(privateKeyPath)) {
-                PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(keyPair.getPrivate().getEncoded());
-                fos.write(keySpec.getEncoded());
-            }
-        } catch (NoSuchAlgorithmException | IOException e) {
-            throw new RuntimeException(e);
-        }
-
-        return keyPair;
     }
 
-    public RSAPublicKey getAccessTokenPublicKey() {
-        return (RSAPublicKey) getAccessTokenKeyPair().getPublic();
+    public RSAPublicKey getTokenPublicKey() {
+        return (RSAPublicKey) getTokenKeyPair().getPublic();
     };
-    public RSAPrivateKey getAccessTokenPrivateKey() {
-        return (RSAPrivateKey) getAccessTokenKeyPair().getPrivate();
-    };
-    public RSAPublicKey getRefreshTokenPublicKey() {
-        return (RSAPublicKey) getRefreshTokenKeyPair().getPublic();
-    };
-    public RSAPrivateKey getRefreshTokenPrivateKey() {
-        return (RSAPrivateKey) getRefreshTokenKeyPair().getPrivate();
+    public RSAPrivateKey getTokenPrivateKey() {
+        return (RSAPrivateKey) getTokenKeyPair().getPrivate();
     };
 }

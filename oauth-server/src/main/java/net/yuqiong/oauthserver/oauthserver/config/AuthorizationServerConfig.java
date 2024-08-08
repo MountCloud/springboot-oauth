@@ -12,6 +12,7 @@ import net.yuqiong.oauthserver.oauthserver.token.KeyService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -65,35 +66,36 @@ public class AuthorizationServerConfig  {
         OAuth2AuthorizationServerConfigurer authorizationServerConfigurer =
                 new OAuth2AuthorizationServerConfigurer();
 
+        //密码模式注册一下
         authorizationServerConfigurer
-                .tokenEndpoint(tokenEndpoint ->
-                        tokenEndpoint
-                                .accessTokenRequestConverters(
-                                        authenticationConverters ->// <1>
-                                                authenticationConverters.addAll(
-                                                        // 自定义授权模式转换器(Converter)
-                                                        List.of(
-                                                                new PasswordAuthenticationConverter()
-                                                        )
-                                                )
+            .tokenEndpoint(tokenEndpoint ->
+                tokenEndpoint
+                    .accessTokenRequestConverters(
+                        authenticationConverters ->// <1>
+                            authenticationConverters.addAll(
+                                // 自定义授权模式转换器(Converter)
+                                List.of(
+                                    new PasswordAuthenticationConverter()
                                 )
-                                .authenticationProviders(authenticationProviders ->// <2>
-                                        authenticationProviders.addAll(
-                                                // 自定义授权模式提供者(Provider)
-                                                List.of(
-                                                        new PasswordAuthenticationProvider(userDetailsService,
-                                                                passwordEncoder,
-                                                                registeredClientRepository,
-                                                                oAuth2AuthorizationService,
-                                                                authenticationManager,
-                                                                tokenGenerator
-                                                        )
-                                                )
-                                        )
+                            )
+                    )
+                    .authenticationProviders(authenticationProviders ->// <2>
+                        authenticationProviders.addAll(
+                            // 自定义授权模式提供者(Provider)
+                            List.of(
+                                new PasswordAuthenticationProvider(userDetailsService,
+                                    passwordEncoder,
+                                    registeredClientRepository,
+                                    oAuth2AuthorizationService,
+                                    authenticationManager,
+                                    tokenGenerator
                                 )
+                            )
+                        )
+                    )
 //                                .accessTokenResponseHandler(new MyAuthenticationSuccessHandler()) // 自定义成功响应
 //                                .errorResponseHandler(new MyAuthenticationFailureHandler()) // 自定义失败响应
-                );
+            );
 
 
         RequestMatcher endpointsMatcher = authorizationServerConfigurer
@@ -136,7 +138,11 @@ public class AuthorizationServerConfig  {
                 .password(passwordEncoder().encode("password"))
                 .roles("USER")
                 .build();
-        return new InMemoryUserDetailsManager(user);
+        UserDetails admin = User.withUsername("admin")
+                .password(passwordEncoder().encode("password"))
+                .roles("ADMIN")
+                .build();
+        return new InMemoryUserDetailsManager(user,admin);
     }
 
     @Bean
@@ -145,19 +151,21 @@ public class AuthorizationServerConfig  {
     }
 
     @Bean
+    @Order(1)
     public JwtEncoder jwtEncoder() throws NoSuchAlgorithmException {
         JWKSource<SecurityContext> jwkSource = jwkSource();
         return new NimbusJwtEncoder(jwkSource);
     }
 
     @Bean
+    @Order(1)
     public JwtDecoder jwtDecoder() {
-        return NimbusJwtDecoder.withPublicKey(keyService.getAccessTokenPublicKey()).build();
+        return NimbusJwtDecoder.withPublicKey(keyService.getTokenPublicKey()).build();
     }
 
     private JWKSource<SecurityContext> jwkSource() {
-        RSAKey rsaKey = new RSAKey.Builder(keyService.getAccessTokenPublicKey())
-                .privateKey(keyService.getAccessTokenPrivateKey())
+        RSAKey rsaKey = new RSAKey.Builder(keyService.getTokenPublicKey())
+                .privateKey(keyService.getTokenPrivateKey())
                 .keyID(UUID.randomUUID().toString())
                 .build();
         JWKSet jwkSet = new JWKSet(rsaKey);
@@ -181,18 +189,6 @@ public class AuthorizationServerConfig  {
         return new DelegatingOAuth2TokenGenerator(
                 jwtGenerator);
     }
-
-//    @Bean
-//    public AuthenticationManager authenticationManager(HttpSecurity http,PasswordAuthenticationProvider passwordAuthenticationProvider) throws Exception {
-//        return http.getSharedObject(AuthenticationManagerBuilder.class)
-//                .authenticationProvider(passwordAuthenticationProvider)
-//                .build();
-//    }
-//
-//    @Bean
-//    public PasswordAuthenticationToken passwordAuthenticationToken(OAuth2TokenContext context) {
-//        return new PasswordAuthenticationToken(null,null);
-//    }
 
 
 }
